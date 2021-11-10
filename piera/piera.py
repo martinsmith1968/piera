@@ -77,7 +77,8 @@ class Hiera(object):
         liftime of this instance.
     :param kwargs: Any additional kwargs will be added to the context
     """
-    def __init__(self, base_file, backends=None, context=None, **kwargs):
+    def __init__(self, base_file, version=3, backends=None, context=None, **kwargs):
+        self.version = version
         self.base_file = base_file
         self.context = context or {}
         self.context.update(kwargs)
@@ -108,13 +109,18 @@ class Hiera(object):
         if not self.base:
             raise Exception("Failed to parse base Hiera configuration")
 
+        # Detect keys by version
+        hierarchy_key = 'hierarchy' if self.version == 5 else ':hierarchy'
+        backends_list = self.base[':backends'] if self.version == 3 else ['yaml']
+
         # Load all backends
         self.backends = OrderedDict()
-        for backend in self.base[':backends']:
+        for backend in backends_list:
             obj = [i for i in backends if i.NAME == backend]
             if not len(obj):
                 raise Exception("Invalid Backend: `{}`".format(backend))
-            self.backends[backend] = obj[0](self, self.base.get(":{}".format(backend)))
+            backend_key = ":{}".format(backend) if self.version == 3 else 'defaults'
+            self.backends[backend] = obj[0](self, self.base.get(backend_key))
 
         # Make sure we have at least a single backend
         if not len(self.backends):
@@ -122,12 +128,18 @@ class Hiera(object):
 
         self.hierarchy = []
 
-        if ':hierarchy' not in self.base:
+        if hierarchy_key not in self.base:
             raise Exception("Invalid Base Hiera Config: missing hierarchy key")
 
         # Load our heirarchy
-        for path in self.base[':hierarchy']:
-            self.hierarchy.append(rformat.sub("{\g<1>}", path, count=0))
+        for path in self.base[hierarchy_key]:
+            path_key = path
+            if hasattr(path, 'path'):
+                path_key = path.path
+            if isinstance(path, dict):
+                path_key = path['path']
+            hierarchy_key = rformat.sub("{\g<1>}", path_key, count=0)
+            self.hierarchy.append(hierarchy_key)
 
         # Load our backends
         for backend in self.backends.values():
@@ -323,11 +335,14 @@ class Hiera(object):
                         self.base_path,
                         backend.datadir.format(**new_context),
                         path.format(**new_context))
+                    path = path.replace("\\", "/")
                 except KeyError:
                     continue
 
                 if os.path.isdir(path):
                     paths.extend(list(self.load_directory(path, backend)))
+                elif os.path.exists(path):
+                    paths.append(self.load_file(path, backend))
                 elif os.path.exists(path + '.' + backend.NAME):
                     paths.append(self.load_file(path + '.' + backend.NAME, backend))
 
@@ -341,3 +356,16 @@ class Hiera(object):
             if throw:
                 raise
             return default
+
+    def get_and_assert(self, keyName, expectedValue, convertToString=False):
+        print ('Getting:', keyName, ', expecting:', expectedValue)
+        value = self.get(keyName)
+        if convertToString:
+            value = str(value)
+        assert value == expectedValue, "'%s' was: '%s', expected: '%s'" % (keyName, value, expectedValue)
+
+    def get_context_description(self):
+        str = ""
+        for k, v in self.context:
+            str += "%s%s: %s" % (("" if len(str) == 0 else ", "), k, v)
+        return str

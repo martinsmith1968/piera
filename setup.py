@@ -18,13 +18,13 @@ with open('README.md') as f:
 
 setup(
     name='piera',
-    version='1.2.0',
+    version='2.0.0',
     description='a python hiera parser',
     long_description=readme + '\n\n',
     long_description_content_type="text/markdown",
-    author='Andrei Zbikowski',
-    author_email='andrei.zbikowski@gmail.com',
-    url='http://github.com/b1naryth1ef/piera',
+    author='Martin Smith',
+    author_email='martinsmith1968@gmail.com',
+    url='http://github.com/martinsmith1968/piera',
     packages=packages,
     package_data={"": ["README.md"]},
     package_dir={'piera': 'piera'},
