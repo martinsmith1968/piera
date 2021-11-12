@@ -71,14 +71,17 @@ class Hiera(object):
     to retrieve and fully resolve Hiera data.
 
     :param base_file: The Hiera base configuration file path or file-like object
+    :param version: The Hiera file version to expect. Default: 3 for backwards compatibility
+    :param always_resolve: Allow resolve to skip values that aren't present. Default: False - breaks backwards compatibility
     :param backends: A list of backends to use for loading, by default this is
         YAMLBackend and JSONBackend
     :param context: Any dictionary of format/context variables to default for the
         liftime of this instance.
     :param kwargs: Any additional kwargs will be added to the context
     """
-    def __init__(self, base_file, version=3, backends=None, context=None, **kwargs):
+    def __init__(self, base_file, version=5, always_resolve=False, backends=None, context=None, **kwargs):
         self.version = version
+        self.always_resolve = always_resolve
         self.base_file = base_file
         self.context = context or {}
         self.context.update(kwargs)
@@ -110,7 +113,7 @@ class Hiera(object):
             raise Exception("Failed to parse base Hiera configuration")
 
         # Detect keys by version
-        hierarchy_key = 'hierarchy' if self.version == 5 else ':hierarchy'
+        hierarchy_key = ':hierarchy' if self.version == 3 else 'hierarchy'
         backends_list = self.base[':backends'] if self.version == 3 else ['yaml']
 
         # Load all backends
@@ -137,7 +140,12 @@ class Hiera(object):
             if hasattr(path, 'path'):
                 path_key = path.path
             if isinstance(path, dict):
-                path_key = path['path']
+                if 'path' in path:
+                    path_key = path['path']
+                elif 'name' in path:
+                    path_key = path['name']
+                else:
+                    path_key = None
             hierarchy_key = rformat.sub("{\g<1>}", path_key, count=0)
             self.hierarchy.append(hierarchy_key)
 
@@ -233,7 +241,8 @@ class Hiera(object):
         interps = interpolate.findall(s)
 
         for i in interps:
-            s = interpolate.sub(context.get(i), s, 1)
+            if self.always_resolve or self.can_resolve(i):
+                s = interpolate.sub(context.get(i), s, 1)
 
         return s
 
@@ -335,7 +344,6 @@ class Hiera(object):
                         self.base_path,
                         backend.datadir.format(**new_context),
                         path.format(**new_context))
-                    path = path.replace("\\", "/")
                 except KeyError:
                     continue
 
@@ -357,15 +365,30 @@ class Hiera(object):
                 raise
             return default
 
-    def get_and_assert(self, keyName, expectedValue, convertToString=False):
-        print ('Getting:', keyName, ', expecting:', expectedValue)
-        value = self.get(keyName)
-        if convertToString:
-            value = str(value)
-        assert value == expectedValue, "'%s' was: '%s', expected: '%s'" % (keyName, value, expectedValue)
+    def get_nested(self, keyName):
+        keyParts = keyName.split('.')
 
-    def get_context_description(self):
-        str = ""
-        for k, v in self.context:
-            str += "%s%s: %s" % (("" if len(str) == 0 else ", "), k, v)
-        return str
+        value = None
+
+        for i in range(0, len(keyParts)):
+            keyPartName = keyParts[i]
+
+            if i == 0:
+                #if self.has(keyPartName):
+                value = self.get(keyPartName)
+            elif isinstance(value, dict) and keyPartName in value:
+                value = value[keyPartName]
+            else:
+                value = None
+
+        return value
+
+    def get_and_assert(self, keyName, expectedValue, result_func=None):
+        print ('Getting: %s, expecting: %s%s' % (keyName, expectedValue, "" if result_func is None else " (after conversion func)"))
+
+        value = self.get_nested(keyName)
+
+        if result_func != None:
+            value = result_func(value)
+
+        assert value == expectedValue, "'%s' was: '%s', expected: '%s'" % (keyName, value, expectedValue)
