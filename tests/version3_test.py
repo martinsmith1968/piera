@@ -16,6 +16,8 @@ class BaseTestPiera(unittest.TestCase):
     def setUp(self):
         self.base = current_dirname
         self.hiera = piera.Hiera(os.path.join(current_dirname, data_filename),
+                                 version=3,
+                                 always_resolve=True,
                                  name='test')
 
     def tearDown(self):
@@ -27,7 +29,7 @@ class TestPieraConfig(unittest.TestCase):
         obj = StringIO.StringIO("")
 
         with self.assertRaisesRegex(Exception, "Failed to parse base Hiera configuration"):
-            piera.Hiera(obj)
+            piera.Hiera(obj, version=3)
 
     def test_invalid_backends_config(self):
         obj = StringIO.StringIO("""
@@ -36,7 +38,7 @@ class TestPieraConfig(unittest.TestCase):
         """)
 
         with self.assertRaisesRegex(Exception, "Invalid Backend: `nope`"):
-            piera.Hiera(obj)
+            piera.Hiera(obj, version=3)
 
     def test_invalid_hierarchy_config(self):
         obj = StringIO.StringIO("""
@@ -57,13 +59,13 @@ class TestPieraConfig(unittest.TestCase):
                 :datadir: data
         """)
 
-        piera.Hiera(obj)
+        piera.Hiera(obj, version=3)
 
 
 class TestPiera(BaseTestPiera):
     def test_different_path(self):
         os.chdir(tempfile.gettempdir())
-        hiera = piera.Hiera(os.path.join(self.base, data_filename), name='test')
+        hiera = piera.Hiera(os.path.join(self.base, data_filename), version=3, always_resolve=True, name='test')
         self.assertEqual(hiera.get('test_basic_get'), 'test_basic_get_works')
         self.assertEqual(hiera.get('test_hierarchy_get'), 'test_hierarchy_get_level1')
 

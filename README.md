@@ -35,8 +35,42 @@ assert h.get("key_hiera") == "OHAI value"
 
 # Give piera context
 assert h.get("my_context_based_key", name='test01', environment='qa') == "context is great!"
+
+# Get and assert in one call
+print('\nContext:', h.context)
+h.get_and_assert("key_hiera", 'OHAI value')
 ```
+
+Get and assert will give the following output:
+
+```text
+Context: {}
+Getting: key_hiera, expecting: OHAI value
+```
+
+And it the assertion fails:
+
+```text
+Failure: 'key_hiera' was: 'unexpected value', expected: 'OHIA value'
+```
+
+And the script will exit
 
 ### Requirements
 
 * Python 2.7+
+* Python 3.x
+
+### Compatibility Notes
+
+#### v1.3.0 : Version 5 Support
+
+This version breaks backwards compatibility by simplifying the hiera constructor call for ClearBank.
+
+```python
+# In v1.2.0:
+h = piera.Hiera("my_hiera.yaml")
+
+# In v1.3.0 would need to be:
+h = piera.Hiera("my_hiera.yaml", version=3, always_resolve=True)
+```

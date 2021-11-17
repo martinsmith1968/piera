@@ -17,6 +17,7 @@ class BaseTestPiera(unittest.TestCase):
         self.base = current_dirname
         self.hiera = piera.Hiera(os.path.join(current_dirname, data_filename),
                                  version=5,
+                                 always_resolve=True,
                                  name='test')
 
     def tearDown(self):
@@ -28,16 +29,7 @@ class TestPieraConfig(unittest.TestCase):
         obj = StringIO.StringIO("")
 
         with self.assertRaisesRegex(Exception, "Failed to parse base Hiera configuration"):
-            piera.Hiera(obj)
-
-    def test_invalid_backends_config(self):
-        obj = StringIO.StringIO("""
-            :backends:
-                - nope
-        """)
-
-        with self.assertRaisesRegex(Exception, "Invalid Backend: `nope`"):
-            piera.Hiera(obj)
+            piera.Hiera(obj, version=5, always_resolve=False)
 
     def test_invalid_hierarchy_config(self):
         obj = StringIO.StringIO("""
@@ -46,15 +38,13 @@ class TestPieraConfig(unittest.TestCase):
         """)
 
         with self.assertRaisesRegex(Exception, "Invalid Base Hiera Config: missing hierarchy key"):
-            piera.Hiera(obj)
+            piera.Hiera(obj, version=5, always_resolve=False)
 
     def test_valid_config(self):
         obj = StringIO.StringIO("""
-            :backends:
-                - yaml
-            :hierarchy:
+            hierarchy:
                 - common
-            :yaml:
+            yaml:
                 :datadir: data
         """)
 
