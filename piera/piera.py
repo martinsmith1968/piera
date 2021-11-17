@@ -374,7 +374,6 @@ class Hiera(object):
             keyPartName = keyParts[i]
 
             if i == 0:
-                #if self.has(keyPartName):
                 value = self.get(keyPartName)
             elif isinstance(value, dict) and keyPartName in value:
                 value = value[keyPartName]
@@ -391,4 +390,7 @@ class Hiera(object):
         if result_func != None:
             value = result_func(value)
 
-        assert value == expectedValue, "'%s' was: '%s', expected: '%s'" % (keyName, value, expectedValue)
+        try:
+            assert value == expectedValue, "'%s' was: '%s', expected: '%s'" % (keyName, value, expectedValue)
+        except Exception as err:
+            raise SystemExit("Failure: %s" % (err))
