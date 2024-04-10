@@ -1,25 +1,20 @@
 #!/usr/bin/env python
 
+import sys
+
 try:
     from setuptools import setup
 except ImportError:
-    from distutils.core import setup
-
-packages = [
-    'piera',
-]
-
-requires = [
-    'pyyaml'
-]
+    if sys.version_info < (3, 12):
+        from distutils.core import setup
 
 with open('README.md') as f:
     readme = f.read()
 
 setup(
     name='piera',
-    version='1.3.0',
-    description='a python hiera parser',
+    version='1.5.0',
+    description='a python hiera parser and validator',
     long_description=readme + '\n\n',
     long_description_content_type="text/markdown",
     author='Andrei Zbikowski',
@@ -27,11 +22,11 @@ setup(
     maintainer='Martin Smith',
     maintainer_email='martin.smith@clear.bank',
     url='http://github.com/ClearBank/piera',
-    packages=packages,
+    packages=['piera'],
     package_data={"": ["README.md"]},
     package_dir={'piera': 'piera'},
     include_package_data=True,
-    install_requires=requires,
+    install_requires=['pyyaml'],
     license='Apache 2.0',
     zip_safe=False,
     test_suite='tests',
@@ -46,5 +41,7 @@ setup(
         'Programming Language :: Python :: 3.2',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
     ],
 )
