@@ -5,6 +5,7 @@ import sys
 try:
     from setuptools import setup
 except ImportError:
+    # Described here : https://stackoverflow.com/questions/69858963/how-can-one-fully-replace-distutils-which-is-deprecated-in-3-10
     if sys.version_info < (3, 12):
         from distutils.core import setup
 
